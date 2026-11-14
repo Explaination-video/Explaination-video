@@ -11,7 +11,9 @@ elif mode == 'compose':
     out = []
 else:
     handle = job.get('handle', .25)
-    for s in film['shots']:
+    # explicit frame ranges [shot, a, b] (e.g. the missing frames of a slow shot, cut short enough for the 6 h job limit)
+    out += [dict(id=f"{s}_{a:04d}", shot=s, a=a, b=b) for s, a, b in job.get('pieces', [])]
+    for s in (film['shots'] if not job.get('pieces') else []):
         if only and s['id'] not in only: continue
         if s.get('render') is False: continue
         if mode == 'stills':
@@ -25,6 +27,7 @@ else:
             # 24-frame chunks keeps that size so the pieces still tile exactly
             step = job.get('chunk', 12)
             if not any(k.startswith(s['id'] + '_') for k in size_ref): step = job.get('chunk_by_world', {}).get(s['world'], step)
+            if not any(k.startswith(s['id'] + '_') for k in size_ref): step = job.get('chunk_by_shot', {}).get(s['id'], step)   # very slow shots
             for a in range(1, n + 1, step):
                 if f"{s['id']}_{a:04d}" in skip: continue
                 out.append(dict(id=f"{s['id']}_{a:04d}", shot=s['id'], a=a, b=min(n, a + step - 1)))
